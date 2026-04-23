@@ -1,0 +1,26 @@
+{
+  "name": "anti-compact",
+  "version": "0.1.0",
+  "description": "Claude Code plugin: intercepts /compact and generates a structured session handoff",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "test": "node --test 'tests/**/*.test.mjs'",
+    "test:unit": "node --test 'tests/unit/**/*.test.mjs'",
+    "test:integration": "node --test 'tests/integration/**/*.test.mjs'"
+  },
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "context",
+    "handoff",
+    "compaction"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joeblackwaslike/anti-compact.git"
+  }
+}

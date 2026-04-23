@@ -1,0 +1,27 @@
+{
+  "name": "anti-compact",
+  "version": "0.1.0",
+  "description": "Intercepts /compact and generates a structured session handoff instead of lossy compaction",
+  "author": "joeblackwaslike",
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/precompact-handoff.mjs\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  },
+  "commands": [
+    {
+      "name": "handoff",
+      "description": "Generate a structured session handoff, or manage precompact automation (auto/on/off)",
+      "file": "commands/handoff.md"
+    }
+  ]
+}
