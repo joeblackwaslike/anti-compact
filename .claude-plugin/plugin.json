@@ -1,6 +1,5 @@
 {
   "name": "anti-compact",
-  "version": "0.1.0",
   "description": "Intercepts /compact and generates a structured session handoff instead of lossy compaction",
   "author": "joeblackwaslike",
   "hooks": {
