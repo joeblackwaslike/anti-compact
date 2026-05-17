@@ -1,7 +1,10 @@
 {
   "name": "anti-compact",
   "description": "Intercepts /compact and generates a structured session handoff instead of lossy compaction",
-  "author": "joeblackwaslike",
+  "author": { "name": "Joe Black", "email": "joeblackwaslike@gmail.com" },
+  "homepage": "https://github.com/joeblackwaslike/anti-compact",
+  "repository": "https://github.com/joeblackwaslike/anti-compact",
+  "license": "MIT",
   "hooks": {
     "PreCompact": [
       {
