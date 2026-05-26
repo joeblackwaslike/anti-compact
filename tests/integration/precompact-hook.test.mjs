@@ -3,7 +3,7 @@
  *
  * Tests the hook's behavior in all three modes:
  *   - disabled (no env var) → exits 0, banner injected
- *   - ANTI_COMPACT_HANDOFF_ONLY=1 → exits 0, handoff output (fallback path, no real claude -p call)
+ *   - ANTI_COMPACT_ENABLE_HANDOFF_ONLY=1 → exits 0, handoff output (fallback path, no real claude -p call)
  *   - ANTI_COMPACT=1             → exits 2, blocks compaction
  */
 
@@ -34,7 +34,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 when ANTI_COMPACT is not set', async () => {
     const { exitCode } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.equal(exitCode, 0);
   });
@@ -42,7 +42,7 @@ describe('precompact hook: disabled path', () => {
   it('writes the context-capacity banner to stdout', async () => {
     const { stdout, exitCode } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.equal(exitCode, 0);
     assert.ok(stdout.length > 0, 'expected non-empty stdout');
@@ -52,7 +52,7 @@ describe('precompact hook: disabled path', () => {
   it('banner mentions /handoff', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.ok(stdout.includes('/handoff'));
   });
@@ -60,7 +60,7 @@ describe('precompact hook: disabled path', () => {
   it('banner includes ~80% token threshold', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.ok(stdout.includes('~80%'), 'expected ~80% in banner');
   });
@@ -68,7 +68,7 @@ describe('precompact hook: disabled path', () => {
   it('banner includes estimated token counts from transcript', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.ok(stdout.includes('~') && stdout.includes('k'), 'expected token count in banner');
   });
@@ -76,7 +76,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 with empty stdin (no transcript path)', async () => {
     const { exitCode, stdout } = await run(HOOK, {
       stdin: '',
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.equal(exitCode, 0);
     assert.ok(stdout.includes('CONTEXT AT CAPACITY'));
@@ -85,7 +85,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 with malformed stdin JSON', async () => {
     const { exitCode } = await run(HOOK, {
       stdin: '{not valid}',
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.equal(exitCode, 0);
   });
@@ -93,7 +93,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 with missing transcript file', async () => {
     const { exitCode } = await run(HOOK, {
       stdin: payload({ transcript_path: '/tmp/no-such-session-xyz.jsonl' }),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.equal(exitCode, 0);
   });
@@ -101,7 +101,7 @@ describe('precompact hook: disabled path', () => {
   it('banner shows the AUTOMATE THIS CTA', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '' },
+      env: { ANTI_COMPACT_ENABLE: '' },
     });
     assert.ok(stdout.includes('AUTOMATE THIS'));
     assert.ok(stdout.includes('/handoff auto'));
@@ -114,7 +114,7 @@ describe('precompact hook: enabled path', () => {
   it('exits 2 to block compaction when ANTI_COMPACT=1', { timeout: 15000 }, async () => {
     const { exitCode } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
+      env: { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
     });
     assert.equal(exitCode, 2, 'expected exit 2 to block compaction');
   });
@@ -122,7 +122,7 @@ describe('precompact hook: enabled path', () => {
   it('stdout contains the handoff heading', { timeout: 15000 }, async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
+      env: { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
     });
     assert.ok(
       stdout.includes('Pre-Compact Handoff') || stdout.includes('handoff'),
@@ -137,7 +137,7 @@ describe('precompact hook: HANDOFF_ONLY path', () => {
   it('exits 0 (no block) when ANTI_COMPACT_HANDOFF_ONLY=1', { timeout: 15000 }, async () => {
     const { exitCode } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_HANDOFF_ONLY: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
+      env: { ANTI_COMPACT_ENABLE_HANDOFF_ONLY: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
     });
     assert.equal(exitCode, 0, 'HANDOFF_ONLY must not block compaction');
   });
@@ -145,7 +145,7 @@ describe('precompact hook: HANDOFF_ONLY path', () => {
   it('stdout contains handoff content', { timeout: 15000 }, async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_HANDOFF_ONLY: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
+      env: { ANTI_COMPACT_ENABLE_HANDOFF_ONLY: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
     });
     assert.ok(stdout.length > 0, 'expected handoff output');
   });

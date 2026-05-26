@@ -4,7 +4,7 @@ description: Generate a structured session handoff prompt, or manage precompact 
 allowed-tools: ['Bash', 'Read', 'Edit']
 ---
 
-You are running `/handoff`. The subcommand determines the workflow:
+You are running `/anti-compact:handoff`. The subcommand determines the workflow:
 
 - **No args** — generate a handoff for the current session and display it
 - **`auto`** — enable precompact automation in Claude Code settings
@@ -35,7 +35,7 @@ Pipe the transcript to the hook in handoff-only mode:
 
 ```bash
 echo "{\"transcript_path\":\"${TRANSCRIPT}\"}" | \
-  ANTI_COMPACT_HANDOFF_ONLY=1 node "$(pwd)/hooks/precompact-handoff.mjs"
+  ANTI_COMPACT_ENABLE_HANDOFF_ONLY=1 node "$(pwd)/hooks/precompact-handoff.mjs"
 ```
 
 Or if running from outside the plugin directory, locate the hook via the plugin root:
@@ -44,7 +44,7 @@ Or if running from outside the plugin directory, locate the hook via the plugin 
 PLUGIN_DIR="${CLAUDE_PLUGIN_ROOT:-$(pwd)}"
 
 echo "{\"transcript_path\":\"${TRANSCRIPT}\"}" | \
-  ANTI_COMPACT_HANDOFF_ONLY=1 node "${PLUGIN_DIR}/hooks/precompact-handoff.mjs"
+  ANTI_COMPACT_ENABLE_HANDOFF_ONLY=1 node "${PLUGIN_DIR}/hooks/precompact-handoff.mjs"
 ```
 
 If the hook is not found, fall back to generating a manual summary:
@@ -58,13 +58,13 @@ Summarize the current session using your own context. Include:
 - Mistakes encountered and their solutions
 - Next concrete steps
 
-Present the result in a fenced code block so the user can copy and paste it.
+Present the result in a fenced code block so the user can copy and paste it.  To prevent contained markdown from breaking out of the fence, use indentation to fence the block.
 
 ### Phase 3 — Present the result
 
 Display the output in a clearly labeled section:
 
-```
+```md
 ## Session Handoff
 
 Paste the block below as your first message in a new session to resume:
@@ -76,7 +76,7 @@ Paste the block below as your first message in a new session to resume:
 
 ## Workflow: `auto` or `on` (enable precompact automation)
 
-Enable the precompact hook by adding `ANTI_COMPACT=1` to the PreCompact hook command in `~/.claude/settings.json`.
+Enable the precompact hook by adding `ANTI_COMPACT_ENABLE=1` to the PreCompact hook command in `~/.claude/settings.json`.
 
 ### Phase 1 — Read current settings
 
@@ -88,11 +88,11 @@ cat ~/.claude/settings.json
 
 Look for a `PreCompact` key in the `hooks` object.
 
-**If a PreCompact entry exists and already has `ANTI_COMPACT=1`:**
+**If a PreCompact entry exists and already has `ANTI_COMPACT_ENABLE=1`:**
 Report: "Precompact automation is already enabled." and stop.
 
 **If a PreCompact entry exists but lacks the env var:**
-Edit the hook command to prepend `ANTI_COMPACT=1 ` to the existing `node ...` command.
+Edit the hook command to prepend `ANTI_COMPACT_ENABLE=1 ` to the existing `node ...` command.
 
 **If no PreCompact entry exists:**
 Add one. Determine the plugin root from the existing hooks (look at the path used in `SessionStart` or `PreToolUse` hooks) or fall back to `${CLAUDE_PLUGIN_ROOT}`.
@@ -106,7 +106,7 @@ The PreCompact block to add:
     "hooks": [
       {
         "type": "command",
-        "command": "ANTI_COMPACT=1 node \"<PLUGIN_ROOT>/hooks/precompact-handoff.mjs\"",
+        "command": "ANTI_COMPACT_ENABLE=1 node \"<PLUGIN_ROOT>/hooks/precompact-handoff.mjs\"",
         "timeout": 60
       }
     ]
@@ -123,7 +123,7 @@ Edit `~/.claude/settings.json` with the change. Then confirm:
 ```
 Precompact automation enabled.
 /compact will now be intercepted — a handoff will be generated and compaction blocked.
-To disable: /handoff off
+To disable: /anti-compact:handoff off
 ```
 
 ---
@@ -138,9 +138,9 @@ cat ~/.claude/settings.json
 
 ### Phase 2 — Find and update the PreCompact entry
 
-Look for a `PreCompact` hook command that includes `ANTI_COMPACT=1`.
+Look for a `PreCompact` hook command that includes `ANTI_COMPACT_ENABLE=1`.
 
-**If found:** Remove the `ANTI_COMPACT=1 ` prefix from the command string. If removing it leaves the hook functional, keep the entry. If the entry was added entirely by this plugin (i.e., it only exists because of precompact automation), offer to remove the whole entry.
+**If found:** Remove the `ANTI_COMPACT_ENABLE=1 ` prefix from the command string. If removing it leaves the hook functional, keep the entry. If the entry was added entirely by this plugin (i.e., it only exists because of precompact automation), offer to remove the whole entry.
 
 **If not found:** Report: "Precompact automation is not currently enabled." and stop.
 
@@ -149,5 +149,5 @@ Look for a `PreCompact` hook command that includes `ANTI_COMPACT=1`.
 ```
 Precompact automation disabled.
 /compact will now run normally.
-To re-enable: /handoff on
+To re-enable: /anti-compact:handoff on
 ```

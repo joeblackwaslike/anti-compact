@@ -4,8 +4,8 @@
  * PreCompact hook: intercepts /compact, generates a session handoff, then blocks.
  *
  * Modes:
- *   ANTI_COMPACT=1              — enabled: generates handoff and exits 2 (blocks /compact)
- *   ANTI_COMPACT_HANDOFF_ONLY=1 — on-demand: generates handoff and exits 0 (no block)
+ *   ANTI_COMPACT_ENABLE=1              — enabled: generates handoff and exits 2 (blocks /compact)
+ *   ANTI_COMPACT_ENABLE_HANDOFF_ONLY=1 — on-demand: generates handoff and exits 0 (no block)
  *   neither set                 — disabled: emits context-full warning banner and exits 0
  *
  * stdin: JSON with { hook_event_name, session_id, transcript_path }
@@ -21,8 +21,8 @@ import {
   buildFallbackHandoff,
 } from './lib/precompact.mjs';
 
-const ENABLED = Boolean(process.env.ANTI_COMPACT);
-const HANDOFF_ONLY = Boolean(process.env.ANTI_COMPACT_HANDOFF_ONLY);
+const ENABLED = Boolean(process.env.ANTI_COMPACT_ENABLE);
+const HANDOFF_ONLY = Boolean(process.env.ANTI_COMPACT_ENABLE_HANDOFF_ONLY);
 
 // Resolve claude binary: prefer ANTI_COMPACT_CLAUDE_BIN (test seam), then PATH, then nvm fallback.
 function findClaudeBin() {
