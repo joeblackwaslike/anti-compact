@@ -21,6 +21,28 @@ threshold rather than read directly:
 windowTokens = approxTokens / (pct / 100)
 ```
 
+## Tuning when it fires
+
+`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` isn't specific to this plugin — it's read by Claude Code itself
+to decide when `PreCompact` fires, so this plugin's handoff generation moves with it. The default
+~83.5% is fine, but by the time context is that full, the model producing the handoff is at its
+own least-sharp point (context rot sets in well before 83.5%), which can mean a lower-quality
+handoff right when you need a good one.
+
+**A reasonable starting point: `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=65`.** That leaves real working
+room before firing while triggering well before quality degrades. Treat it as a starting point,
+not a rule — tune it more aggressively (lower) for long debugging/exploratory sessions where
+context rot bites earlier, or leave it closer to default for short, focused sessions. Set it in
+`~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "65"
+  }
+}
+```
+
 ## Generating the handoff
 
 The conversation text is piped to an isolated `claude -p` call with a system prompt (passed via
