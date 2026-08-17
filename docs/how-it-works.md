@@ -13,11 +13,12 @@ Token estimate:
 approxTokens = (msgChars + attachChars) / 4
 ```
 
-Since `PreCompact` fires at exactly 80% of the context window, the window size is inferred from
-that estimate rather than read directly:
+`PreCompact` fires at Claude Code's auto-compact threshold — the `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`
+env var (1–100), defaulting to ~83.5% when unset — so the window size is inferred from that
+threshold rather than read directly:
 
 ```
-windowTokens = approxTokens / 0.8
+windowTokens = approxTokens / (pct / 100)
 ```
 
 ## Generating the handoff
@@ -61,6 +62,9 @@ the hook entirely.
   under heavy load, the fallback handoff may fire instead of the full one.
 - The token estimate is an approximation (`chars ÷ 4`). Actual token usage may differ from what
   the hook reports.
+- The inferred window size assumes the default `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` (~83.5%) unless
+  that env var is set — the hook reads it at run time, but if it's unavailable at that point (or
+  changes mid-session) the reported window size will be approximate.
 - This feature currently only works in Claude Code. Gemini CLI and Codex do not have a
   `PreCompact` hook equivalent.
 - The `claude` binary must be resolvable — via `PATH`, a known fallback location, or the

@@ -111,11 +111,11 @@ async function main() {
     ? parseTranscript(transcriptPath)
     : { entries: [], msgChars: 0, attachChars: 0 };
 
-  const { approxK, windowK } = estimateTokens(msgChars, attachChars);
+  const { approxK, windowK, pct } = estimateTokens(msgChars, attachChars);
 
   // Disabled path: emit the context-full warning banner, then allow compaction.
   if (!ENABLED && !HANDOFF_ONLY) {
-    process.stdout.write(buildBanner(approxK, windowK) + '\n');
+    process.stdout.write(buildBanner(approxK, windowK, pct) + '\n');
     process.exit(0);
   }
 
@@ -129,7 +129,7 @@ async function main() {
 
   process.stdout.write(`# [anti-compact] Pre-Compact Handoff
 
-Context: ~${approxK}k / ~${windowK}k tokens (~80%). Compaction would degrade inference quality — blocking to preserve session context.
+Context: ~${approxK}k / ~${windowK}k tokens (~${pct}%). Compaction would degrade inference quality — blocking to preserve session context.
 
 Copy this prompt to continue in a new session:
 

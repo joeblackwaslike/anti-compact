@@ -17,6 +17,22 @@ const ENV_ALLOWLIST = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_A
 const RULE_HEAVY = '═'.repeat(RULE_WIDTH);
 const RULE_LIGHT = '─'.repeat(RULE_WIDTH);
 
+// Claude Code's default auto-compact threshold when CLAUDE_AUTOCOMPACT_PCT_OVERRIDE is unset.
+const DEFAULT_AUTOCOMPACT_PCT = 83.5;
+
+/**
+ * Resolve the active auto-compact percentage. Claude Code reads
+ * CLAUDE_AUTOCOMPACT_PCT_OVERRIDE (1-100) to control when PreCompact fires; out-of-range or
+ * non-numeric values fall back to the default.
+ *
+ * @param {NodeJS.ProcessEnv} sourceEnv
+ * @returns {number}
+ */
+function autocompactPct(sourceEnv) {
+  const override = Number(sourceEnv.CLAUDE_AUTOCOMPACT_PCT_OVERRIDE);
+  return Number.isFinite(override) && override >= 1 && override <= 100 ? override : DEFAULT_AUTOCOMPACT_PCT;
+}
+
 /**
  * Parse a session JSONL transcript and return conversation entries plus
  * raw character counts for token estimation.
@@ -79,19 +95,22 @@ export function parseTranscript(filePath) {
 
 /**
  * Estimate token usage and infer the context window size.
- * PreCompact fires at exactly 80%, so windowTokens = approxTokens / 0.8.
+ * PreCompact fires at the active auto-compact percentage (CLAUDE_AUTOCOMPACT_PCT_OVERRIDE,
+ * default ~83.5%), so windowTokens = approxTokens / (pct / 100).
  *
  * @param {number} msgChars  - chars from user+assistant messages
  * @param {number} attachChars - chars from hook attachment records
- * @returns {{ approxTokens: number, windowTokens: number, approxK: number, windowK: number }}
+ * @param {NodeJS.ProcessEnv} [sourceEnv]
+ * @returns {{ approxTokens: number, windowTokens: number, approxK: number, windowK: number, pct: number }}
  */
-export function estimateTokens(msgChars, attachChars) {
+export function estimateTokens(msgChars, attachChars, sourceEnv = process.env) {
   const totalChars = msgChars + attachChars;
   const approxTokens = Math.round(totalChars / 4);
-  const windowTokens = Math.round(approxTokens / 0.8);
+  const pct = autocompactPct(sourceEnv);
+  const windowTokens = Math.round(approxTokens / (pct / 100));
   const approxK = Math.round(approxTokens / 1000);
   const windowK = Math.round(windowTokens / 1000);
-  return { approxTokens, windowTokens, approxK, windowK };
+  return { approxTokens, windowTokens, approxK, windowK, pct };
 }
 
 /**
@@ -101,13 +120,14 @@ export function estimateTokens(msgChars, attachChars) {
  *
  * @param {number} approxK  - estimated tokens used, in thousands
  * @param {number} windowK  - estimated window size, in thousands
+ * @param {number} [pct]    - the active auto-compact percentage
  * @returns {string}
  */
-export function buildBanner(approxK, windowK) {
+export function buildBanner(approxK, windowK, pct = DEFAULT_AUTOCOMPACT_PCT) {
   const tokenLine =
     approxK > 0
-      ? `  CONTEXT AT CAPACITY  ·  ~${approxK}k / ~${windowK}k tokens used  (~80%)`
-      : `  CONTEXT AT CAPACITY  ·  context window at ~80% capacity`;
+      ? `  CONTEXT AT CAPACITY  ·  ~${approxK}k / ~${windowK}k tokens used  (~${pct}%)`
+      : `  CONTEXT AT CAPACITY  ·  context window at ~${pct}% capacity`;
 
   return [
     RULE_HEAVY,

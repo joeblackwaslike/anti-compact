@@ -155,7 +155,7 @@ describe('parseTranscript', () => {
 
 describe('estimateTokens', () => {
   it('returns zeros for zero input', () => {
-    const result = estimateTokens(0, 0);
+    const result = estimateTokens(0, 0, {});
     assert.equal(result.approxTokens, 0);
     assert.equal(result.windowTokens, 0);
     assert.equal(result.approxK, 0);
@@ -163,25 +163,47 @@ describe('estimateTokens', () => {
   });
 
   it('divides total chars by 4 to estimate tokens', () => {
-    const { approxTokens } = estimateTokens(4000, 0);
+    const { approxTokens } = estimateTokens(4000, 0, {});
     assert.equal(approxTokens, 1000);
   });
 
-  it('infers window as approxTokens / 0.8 (PreCompact fires at 80%)', () => {
-    const { approxTokens, windowTokens } = estimateTokens(80000, 0);
+  it('infers window using the default ~83.5% autocompact threshold when no override is set', () => {
+    const { approxTokens, windowTokens, pct } = estimateTokens(80000, 0, {});
     assert.equal(approxTokens, 20000);
-    assert.equal(windowTokens, 25000);
+    assert.equal(pct, 83.5);
+    assert.equal(windowTokens, 23952); // round(20000 / 0.835)
+  });
+
+  it('honors CLAUDE_AUTOCOMPACT_PCT_OVERRIDE when set to a valid percentage', () => {
+    const { windowTokens, pct } = estimateTokens(80000, 0, { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '80' });
+    assert.equal(pct, 80);
+    assert.equal(windowTokens, 25000); // round(20000 / 0.8)
+  });
+
+  it('falls back to the default when the override is out of the 1-100 range', () => {
+    const { pct } = estimateTokens(80000, 0, { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '150' });
+    assert.equal(pct, 83.5);
+  });
+
+  it('falls back to the default when the override is not a number', () => {
+    const { pct } = estimateTokens(80000, 0, { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: 'nope' });
+    assert.equal(pct, 83.5);
   });
 
   it('expresses results in rounded thousands', () => {
-    const { approxK, windowK } = estimateTokens(560000, 0);
+    const { approxK, windowK } = estimateTokens(560000, 0, { CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '80' });
     assert.equal(approxK, 140); // 560000 / 4 = 140000 → 140k
     assert.equal(windowK, 175); // 140000 / 0.8 = 175000 → 175k
   });
 
   it('combines msgChars and attachChars before estimating', () => {
-    const { approxTokens } = estimateTokens(2000, 2000);
+    const { approxTokens } = estimateTokens(2000, 2000, {});
     assert.equal(approxTokens, 1000); // (2000+2000)/4
+  });
+
+  it('defaults to process.env when called with no third argument', () => {
+    const result = estimateTokens(4000, 0);
+    assert.equal(typeof result.pct, 'number');
   });
 });
 
@@ -197,13 +219,18 @@ describe('buildBanner', () => {
     const banner = buildBanner(142, 178);
     assert.ok(banner.includes('~142k'), 'should show approxK');
     assert.ok(banner.includes('~178k'), 'should show windowK');
-    assert.ok(banner.includes('~80%'), 'should show percentage');
+    assert.ok(banner.includes('~83.5%'), 'should show the default percentage');
   });
 
   it('falls back to generic wording when approxK is 0', () => {
     const banner = buildBanner(0, 0);
-    assert.ok(banner.includes('~80%'), 'should still show ~80%');
+    assert.ok(banner.includes('~83.5%'), 'should still show the default percentage');
     assert.ok(!banner.includes('~0k'), 'should not show ~0k/~0k');
+  });
+
+  it('reflects a custom pct value when provided', () => {
+    const banner = buildBanner(100, 125, 70);
+    assert.ok(banner.includes('~70%'));
   });
 
   it('mentions /handoff command', () => {

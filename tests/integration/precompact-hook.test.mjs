@@ -43,7 +43,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 when ANTI_COMPACT is not set', async () => {
     const { exitCode } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.equal(exitCode, 0);
   });
@@ -51,7 +51,7 @@ describe('precompact hook: disabled path', () => {
   it('writes the context-capacity banner to stdout', async () => {
     const { stdout, exitCode } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.equal(exitCode, 0);
     assert.ok(stdout.length > 0, 'expected non-empty stdout');
@@ -61,23 +61,31 @@ describe('precompact hook: disabled path', () => {
   it('banner mentions /handoff', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.ok(stdout.includes('/handoff'));
   });
 
-  it('banner includes ~80% token threshold', async () => {
+  it('banner includes the default ~83.5% token threshold', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
-    assert.ok(stdout.includes('~80%'), 'expected ~80% in banner');
+    assert.ok(stdout.includes('~83.5%'), 'expected ~83.5% in banner');
+  });
+
+  it('banner reflects CLAUDE_AUTOCOMPACT_PCT_OVERRIDE when set', async () => {
+    const { stdout } = await run(HOOK, {
+      stdin: payload(),
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '70' },
+    });
+    assert.ok(stdout.includes('~70%'), 'expected the overridden threshold in banner');
   });
 
   it('banner includes estimated token counts from transcript', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.ok(stdout.includes('~') && stdout.includes('k'), 'expected token count in banner');
   });
@@ -85,7 +93,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 with empty stdin (no transcript path)', async () => {
     const { exitCode, stdout } = await run(HOOK, {
       stdin: '',
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.equal(exitCode, 0);
     assert.ok(stdout.includes('CONTEXT AT CAPACITY'));
@@ -94,7 +102,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 with malformed stdin JSON', async () => {
     const { exitCode } = await run(HOOK, {
       stdin: '{not valid}',
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.equal(exitCode, 0);
   });
@@ -102,7 +110,7 @@ describe('precompact hook: disabled path', () => {
   it('exits 0 with missing transcript file', async () => {
     const { exitCode } = await run(HOOK, {
       stdin: payload({ transcript_path: '/tmp/no-such-session-xyz.jsonl' }),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.equal(exitCode, 0);
   });
@@ -110,7 +118,7 @@ describe('precompact hook: disabled path', () => {
   it('banner shows the AUTOMATE THIS CTA', async () => {
     const { stdout } = await run(HOOK, {
       stdin: payload(),
-      env: { ANTI_COMPACT_ENABLE: '' },
+      env: { ANTI_COMPACT_ENABLE: '', CLAUDE_AUTOCOMPACT_PCT_OVERRIDE: '' },
     });
     assert.ok(stdout.includes('AUTOMATE THIS'));
     assert.ok(stdout.includes('/handoff auto'));
