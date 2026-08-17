@@ -18,12 +18,5 @@
         ]
       }
     ]
-  },
-  "commands": [
-    {
-      "name": "handoff",
-      "description": "Generate a structured session handoff, or manage precompact automation (auto/on/off)",
-      "file": "commands/handoff.md"
-    }
-  ]
+  }
 }
