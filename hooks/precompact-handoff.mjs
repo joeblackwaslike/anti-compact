@@ -19,6 +19,7 @@ import {
   estimateTokens,
   buildBanner,
   buildFallbackHandoff,
+  scopedEnv,
 } from './lib/precompact.mjs';
 
 const ENABLED = Boolean(process.env.ANTI_COMPACT_ENABLE);
@@ -36,13 +37,7 @@ function findClaudeBin() {
   return existsSync(fallback) ? fallback : 'claude';
 }
 
-async function generateHandoff(entries) {
-  const claudeBin = findClaudeBin();
-  const convText = entries
-    .map(e => `${e.role === 'user' ? 'User' : 'Claude'}: ${e.text}`)
-    .join('\n\n---\n\n');
-
-  const prompt = `You are creating a session handoff document. The session is about to be interrupted.
+const SYSTEM_PROMPT = `You are creating a session handoff document. The session is about to be interrupted.
 
 Produce a structured handoff that preserves ALL important context so work can continue seamlessly in a new session. Include:
 - Original task and overall goal
@@ -54,19 +49,35 @@ Produce a structured handoff that preserves ALL important context so work can co
 
 Be thorough. This handoff must preserve more context than an automated summary.
 
-CONVERSATION:
-${convText}`;
+CONVERSATION:`;
+
+async function generateHandoff(entries) {
+  const claudeBin = findClaudeBin();
+  const convText = entries
+    .map(e => `${e.role === 'user' ? 'User' : 'Claude'}: ${e.text}`)
+    .join('\n\n---\n\n');
 
   return new Promise(resolve => {
-    const child = spawn(claudeBin, ['-p', '--no-session-persistence'], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const child = spawn(
+      claudeBin,
+      [
+        '-p',
+        '--no-session-persistence',
+        '--setting-sources',
+        '',
+        '--system-prompt',
+        SYSTEM_PROMPT,
+        '--model',
+        'sonnet',
+      ],
+      { stdio: ['pipe', 'pipe', 'pipe'], env: scopedEnv() }
+    );
 
     let out = '';
     child.stdout.on('data', d => {
       out += d.toString();
     });
-    child.stdin.write(prompt);
+    child.stdin.write(convText);
     child.stdin.end();
 
     // claude -p hangs after printing output due to post-response cleanup.

@@ -11,6 +11,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { run } from '../helpers/subprocess.mjs';
 import { fixturePath } from '../helpers/fixtures.mjs';
 
@@ -18,6 +20,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const HOOK = join(__dirname, '..', '..', 'hooks', 'precompact-handoff.mjs');
 const TRANSCRIPT = fixturePath('session-precompact.jsonl');
 const FAKE_CLAUDE = join(__dirname, '..', 'helpers', 'fake-claude.mjs');
+const CAPTURE_PATH = join(tmpdir(), 'anti-compact-fake-claude-capture.json');
+
+function readCapture() {
+  const capture = JSON.parse(readFileSync(CAPTURE_PATH, 'utf8'));
+  rmSync(CAPTURE_PATH, { force: true });
+  return capture;
+}
 
 function payload(overrides = {}) {
   return JSON.stringify({
@@ -128,6 +137,57 @@ describe('precompact hook: enabled path', () => {
       stdout.includes('Pre-Compact Handoff') || stdout.includes('handoff'),
       'expected handoff content in stdout'
     );
+  });
+
+  it('spawns claude -p with isolation flags', { timeout: 15000 }, async () => {
+    await run(HOOK, {
+      stdin: payload(),
+      env: { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
+    });
+    const { argv } = readCapture();
+    assert.ok(argv.includes('--setting-sources'), 'expected --setting-sources flag');
+    assert.equal(argv[argv.indexOf('--setting-sources') + 1], '', 'expected empty setting-sources value');
+    assert.ok(argv.includes('--system-prompt'), 'expected --system-prompt flag');
+    assert.ok(argv.includes('--model'), 'expected --model flag');
+    assert.equal(argv[argv.indexOf('--model') + 1], 'sonnet', 'expected --model sonnet');
+    assert.ok(argv.includes('--no-session-persistence'), 'expected --no-session-persistence flag');
+  });
+
+  it('does not leak ANTHROPIC_API_KEY/ANTHROPIC_BASE_URL or arbitrary vars to the subprocess', { timeout: 15000 }, async () => {
+    await run(HOOK, {
+      stdin: payload(),
+      env: {
+        ANTI_COMPACT_ENABLE: '1',
+        ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE,
+        ANTHROPIC_API_KEY: 'sk-should-not-leak',
+        ANTHROPIC_BASE_URL: 'https://evil.example.com',
+        SOME_RANDOM_TEST_VAR: 'should-not-leak',
+      },
+    });
+    const { env: capturedEnv } = readCapture();
+    assert.ok(!('ANTHROPIC_API_KEY' in capturedEnv), 'ANTHROPIC_API_KEY must not reach the subprocess');
+    assert.ok(!('ANTHROPIC_BASE_URL' in capturedEnv), 'ANTHROPIC_BASE_URL must not reach the subprocess');
+    assert.ok(!('SOME_RANDOM_TEST_VAR' in capturedEnv), 'arbitrary vars must not reach the subprocess');
+    assert.ok(!('ANTI_COMPACT_CLAUDE_BIN' in capturedEnv), 'test seam var must not reach the subprocess');
+    const allowlist = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'TMPDIR'];
+    // macOS's CoreFoundation runtime injects this into every child process regardless of what
+    // env is passed to spawn() — confirmed via `spawn(node, {env: {}})` — not a leak from our code.
+    const osInjected = ['__CF_USER_TEXT_ENCODING'];
+    for (const key of Object.keys(capturedEnv)) {
+      assert.ok(
+        allowlist.includes(key) || osInjected.includes(key),
+        `unexpected env var reached the subprocess: ${key}`
+      );
+    }
+  });
+
+  it('sends only the conversation text on stdin, not the system instructions', { timeout: 15000 }, async () => {
+    await run(HOOK, {
+      stdin: payload(),
+      env: { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
+    });
+    const { stdin: capturedStdin } = readCapture();
+    assert.ok(!capturedStdin.includes('Produce a structured handoff'), 'system instructions must not be on stdin');
   });
 });
 

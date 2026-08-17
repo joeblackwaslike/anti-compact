@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseTranscript, estimateTokens, buildBanner, buildFallbackHandoff } from '../../hooks/lib/precompact.mjs';
+import {
+  parseTranscript,
+  estimateTokens,
+  buildBanner,
+  buildFallbackHandoff,
+  scopedEnv,
+} from '../../hooks/lib/precompact.mjs';
 
 // ─── parseTranscript ─────────────────────────────────────────────────────────
 
@@ -265,5 +271,64 @@ describe('buildFallbackHandoff', () => {
   it('omits the Conversation section when entries array is empty', () => {
     const result = buildFallbackHandoff([]);
     assert.ok(!result.includes('## Conversation'));
+  });
+});
+
+// ─── scopedEnv ────────────────────────────────────────────────────────────────
+
+describe('scopedEnv', () => {
+  const fakeEnv = {
+    PATH: '/usr/bin:/bin',
+    HOME: '/home/test',
+    USER: 'test',
+    LOGNAME: 'test',
+    SHELL: '/bin/zsh',
+    LANG: 'en_US.UTF-8',
+    LC_ALL: 'en_US.UTF-8',
+    TMPDIR: '/tmp',
+    ANTHROPIC_API_KEY: 'sk-secret',
+    ANTHROPIC_BASE_URL: 'https://evil.example.com',
+    SOME_RANDOM_VAR: 'should-not-leak',
+  };
+
+  it('includes only the allowlisted keys present in the source env', () => {
+    const result = scopedEnv(fakeEnv);
+    assert.deepEqual(Object.keys(result).sort(), [
+      'HOME',
+      'LANG',
+      'LC_ALL',
+      'LOGNAME',
+      'PATH',
+      'SHELL',
+      'TMPDIR',
+      'USER',
+    ]);
+  });
+
+  it('preserves the values of allowlisted keys', () => {
+    const result = scopedEnv(fakeEnv);
+    assert.equal(result.PATH, '/usr/bin:/bin');
+    assert.equal(result.HOME, '/home/test');
+  });
+
+  it('excludes ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL', () => {
+    const result = scopedEnv(fakeEnv);
+    assert.ok(!('ANTHROPIC_API_KEY' in result));
+    assert.ok(!('ANTHROPIC_BASE_URL' in result));
+  });
+
+  it('excludes arbitrary non-allowlisted vars', () => {
+    const result = scopedEnv(fakeEnv);
+    assert.ok(!('SOME_RANDOM_VAR' in result));
+  });
+
+  it('skips allowlisted keys that are undefined in the source env', () => {
+    const result = scopedEnv({ PATH: '/usr/bin' });
+    assert.deepEqual(Object.keys(result), ['PATH']);
+  });
+
+  it('defaults to process.env when called with no argument', () => {
+    const result = scopedEnv();
+    assert.equal(typeof result, 'object');
   });
 });

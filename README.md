@@ -28,6 +28,8 @@ When `/compact` is triggered, anti-compact:
 3. **Blocks the lossy compaction** so nothing is thrown away
 4. **Lets you paste the handoff** into a fresh session to resume with full context
 
+See [docs/how-it-works.md](docs/how-it-works.md) for implementation details.
+
 ## Install
 
 ```sh

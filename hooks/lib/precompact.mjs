@@ -9,6 +9,11 @@ import { execFileSync } from 'node:child_process';
 // Width of the horizontal rule lines in the banner (chars).
 const RULE_WIDTH = 68;
 
+// Env vars passed through to the isolated `claude -p` subprocess. Everything else —
+// notably ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL — is excluded by omission so a stray
+// exported proxy var in the caller's shell can't redirect the call or its auth.
+const ENV_ALLOWLIST = ['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'LANG', 'LC_ALL', 'TMPDIR'];
+
 const RULE_HEAVY = '═'.repeat(RULE_WIDTH);
 const RULE_LIGHT = '─'.repeat(RULE_WIDTH);
 
@@ -166,4 +171,18 @@ export function buildFallbackHandoff(entries) {
   }
 
   return out;
+}
+
+/**
+ * Build an allowlisted env object for the isolated `claude -p` subprocess.
+ *
+ * @param {NodeJS.ProcessEnv} [sourceEnv]
+ * @returns {Record<string, string>}
+ */
+export function scopedEnv(sourceEnv = process.env) {
+  const env = {};
+  for (const key of ENV_ALLOWLIST) {
+    if (sourceEnv[key] !== undefined) env[key] = sourceEnv[key];
+  }
+  return env;
 }
