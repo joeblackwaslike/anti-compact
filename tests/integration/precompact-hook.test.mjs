@@ -262,4 +262,21 @@ describe('precompact hook: safety valve', () => {
     assert.equal(third.exitCode, 2, 'opt-out must preserve unconditional blocking, even on the 3rd call');
     assert.ok(!third.stdout.includes('safety valve'), 'opt-out must not print the safety-valve banner');
   });
+
+  it('does not track safety-valve state under the synthetic "unknown" session_id fallback', { timeout: 30000 }, async () => {
+    // Missing session_id (malformed/missing stdin in production) falls back to 'unknown'.
+    // Repeated calls without a real session_id must never accumulate a shared block-streak
+    // across unrelated invocations, and must never trip the valve.
+    const env = { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE };
+    const stdin = JSON.stringify({ hook_event_name: 'PreCompact', transcript_path: TRANSCRIPT });
+
+    const first = await run(HOOK, { stdin, env });
+    const second = await run(HOOK, { stdin, env });
+    const third = await run(HOOK, { stdin, env });
+
+    assert.equal(first.exitCode, 2);
+    assert.equal(second.exitCode, 2);
+    assert.equal(third.exitCode, 2, 'missing session_id must never trip the safety valve');
+    assert.ok(!third.stdout.includes('safety valve'), 'missing session_id must not print the safety-valve banner');
+  });
 });

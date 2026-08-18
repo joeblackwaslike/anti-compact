@@ -27,6 +27,17 @@ describe('readState', () => {
     const dir = join(tmpdir(), 'state-test-does-not-exist-xyz');
     assert.doesNotThrow(() => readState('some-session', dir));
   });
+
+  it('sanitizes non-numeric/non-finite fields per-field instead of trusting the JSON contents', () => {
+    const dir = freshDir();
+    writeFileSync(
+      join(dir, 'invalid-types-session.json'),
+      JSON.stringify({ consecutiveBlocks: 'not-a-number', lastMsgChars: null, lastSeenAt: NaN }),
+      'utf8'
+    );
+    const state = readState('invalid-types-session', dir);
+    assert.deepEqual(state, { consecutiveBlocks: 0, lastMsgChars: 0, lastSeenAt: 0 });
+  });
 });
 
 describe('readState/writeState round-trip', () => {

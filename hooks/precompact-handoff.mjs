@@ -143,7 +143,10 @@ async function main() {
   let exitCode = HANDOFF_ONLY ? 0 : 2;
 
   // HANDOFF_ONLY and disabled paths have no block-streak to track and are unaffected.
-  if (ENABLED && !HANDOFF_ONLY && SAFETY_VALVE_ENABLED) {
+  // A missing/unparseable session_id also skips tracking: the 'unknown' fallback exists
+  // so the hook never throws, but treating it as a real session key would let unrelated
+  // malformed-stdin calls share (and pollute) one synthetic block-streak.
+  if (ENABLED && !HANDOFF_ONLY && SAFETY_VALVE_ENABLED && sessionId !== 'unknown') {
     const state = readState(sessionId);
     const grew = msgChars > (state.lastMsgChars ?? 0);
     const nextConsecutive = grew ? 1 : (state.consecutiveBlocks ?? 0) + 1;
