@@ -28,10 +28,17 @@ function readCapture() {
   return capture;
 }
 
+// Each call gets its own session_id by default so tests that run the hook in ENABLED
+// mode don't accumulate safety-valve state (hooks/lib/state.mjs) across calls or across
+// suite runs — only tests that explicitly need a shared session (the safety-valve tests
+// below) pass session_id as an override.
+let payloadCounter = 0;
+
 function payload(overrides = {}) {
+  payloadCounter += 1;
   return JSON.stringify({
     hook_event_name: 'PreCompact',
-    session_id: 'test-precompact-001',
+    session_id: `test-precompact-${process.pid}-${payloadCounter}`,
     transcript_path: TRANSCRIPT,
     ...overrides,
   });
@@ -216,5 +223,43 @@ describe('precompact hook: HANDOFF_ONLY path', () => {
       env: { ANTI_COMPACT_ENABLE_HANDOFF_ONLY: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE },
     });
     assert.ok(stdout.length > 0, 'expected handoff output');
+  });
+});
+
+// ─── Safety valve (reactive-recovery fail-open) ───────────────────────────────
+
+describe('precompact hook: safety valve', () => {
+  it('fails open on the 3rd consecutive block when the transcript is not growing', { timeout: 30000 }, async () => {
+    const sessionId = `safety-valve-${process.pid}-${Date.now()}`;
+    const env = { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE };
+    const stdin = payload({ session_id: sessionId });
+
+    const first = await run(HOOK, { stdin, env });
+    const second = await run(HOOK, { stdin, env });
+    const third = await run(HOOK, { stdin, env });
+
+    assert.equal(first.exitCode, 2, 'first call should still block');
+    assert.equal(second.exitCode, 2, 'second call should still block');
+    assert.equal(third.exitCode, 0, 'third consecutive block with no progress should fail open');
+    assert.ok(
+      third.stdout.includes('safety valve'),
+      'expected the safety-valve banner line in the third response stdout'
+    );
+    assert.ok(third.stdout.includes('3'), 'expected the consecutive-block count in the banner');
+  });
+
+  it('ANTI_COMPACT_SAFETY_VALVE=0 preserves the old unconditional-block behavior', { timeout: 30000 }, async () => {
+    const sessionId = `safety-valve-off-${process.pid}-${Date.now()}`;
+    const env = { ANTI_COMPACT_ENABLE: '1', ANTI_COMPACT_CLAUDE_BIN: FAKE_CLAUDE, ANTI_COMPACT_SAFETY_VALVE: '0' };
+    const stdin = payload({ session_id: sessionId });
+
+    const first = await run(HOOK, { stdin, env });
+    const second = await run(HOOK, { stdin, env });
+    const third = await run(HOOK, { stdin, env });
+
+    assert.equal(first.exitCode, 2, 'first call should block');
+    assert.equal(second.exitCode, 2, 'second call should block');
+    assert.equal(third.exitCode, 2, 'opt-out must preserve unconditional blocking, even on the 3rd call');
+    assert.ok(!third.stdout.includes('safety valve'), 'opt-out must not print the safety-valve banner');
   });
 });

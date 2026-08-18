@@ -3,3 +3,9 @@ node_modules/
 .serena/
 .superpowers/
 .worktrees/
+
+# beads (bd) local state — Dolt-backed, synced via its own git remote, not project git
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/

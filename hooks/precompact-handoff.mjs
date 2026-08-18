@@ -8,6 +8,14 @@
  *   ANTI_COMPACT_ENABLE_HANDOFF_ONLY=1 — on-demand: generates handoff and exits 0 (no block)
  *   neither set                 — disabled: emits context-full warning banner and exits 0
  *
+ * Safety valve (ENABLED mode only): blocking PreCompact unconditionally is safe when
+ * auto-compact fires proactively, but if it ever fires reactively — recovering from a
+ * context-limit error the API has already returned — blocking it surfaces that error and
+ * hard-fails the current turn instead. The PreCompact payload has no field distinguishing
+ * the two cases, so this tracks consecutive blocks against a transcript that isn't growing
+ * (the proactive case simply doesn't re-fire until the transcript grows) and fails open
+ * before that crash can happen. Opt out with ANTI_COMPACT_SAFETY_VALVE=0.
+ *
  * stdin: JSON with { hook_event_name, session_id, transcript_path }
  * stdout: raw text (Claude Code PreCompact convention — NOT JSON)
  */
@@ -21,9 +29,11 @@ import {
   buildFallbackHandoff,
   scopedEnv,
 } from './lib/precompact.mjs';
+import { readState, writeState } from './lib/state.mjs';
 
 const ENABLED = Boolean(process.env.ANTI_COMPACT_ENABLE);
 const HANDOFF_ONLY = Boolean(process.env.ANTI_COMPACT_ENABLE_HANDOFF_ONLY);
+const SAFETY_VALVE_ENABLED = process.env.ANTI_COMPACT_SAFETY_VALVE !== '0';
 
 // Resolve claude binary: prefer ANTI_COMPACT_CLAUDE_BIN (test seam), then PATH, then nvm fallback.
 function findClaudeBin() {
@@ -98,11 +108,13 @@ async function generateHandoff(entries) {
 
 async function main() {
   let transcriptPath = null;
+  let sessionId = 'unknown';
 
   try {
     const stdin = readFileSync(0, 'utf8');
     const data = JSON.parse(stdin);
     transcriptPath = data.transcript_path ?? null;
+    sessionId = data.session_id ?? 'unknown';
   } catch {
     /* malformed or missing stdin */
   }
@@ -127,6 +139,23 @@ async function main() {
     summary = buildFallbackHandoff(entries);
   }
 
+  let safetyValveBanner = '';
+  let exitCode = HANDOFF_ONLY ? 0 : 2;
+
+  // HANDOFF_ONLY and disabled paths have no block-streak to track and are unaffected.
+  if (ENABLED && !HANDOFF_ONLY && SAFETY_VALVE_ENABLED) {
+    const state = readState(sessionId);
+    const grew = msgChars > (state.lastMsgChars ?? 0);
+    const nextConsecutive = grew ? 1 : (state.consecutiveBlocks ?? 0) + 1;
+    writeState(sessionId, { consecutiveBlocks: nextConsecutive, lastMsgChars: msgChars, lastSeenAt: Date.now() });
+
+    const safetyValveTripped = pct >= 95 || nextConsecutive >= 3;
+    if (safetyValveTripped) {
+      exitCode = 0;
+      safetyValveBanner = `\n⚠ safety valve: allowing compaction through after ${nextConsecutive} consecutive blocks without progress\n`;
+    }
+  }
+
   process.stdout.write(`# [anti-compact] Pre-Compact Handoff
 
 Context: ~${approxK}k / ~${windowK}k tokens (~${pct}%). Compaction would degrade inference quality — blocking to preserve session context.
@@ -136,10 +165,9 @@ Copy this prompt to continue in a new session:
 \`\`\`
 ${summary}
 \`\`\`
-`);
+${safetyValveBanner}`);
 
-  // HANDOFF_ONLY mode is called on demand (/handoff command) — do not block.
-  process.exit(HANDOFF_ONLY ? 0 : 2);
+  process.exit(exitCode);
 }
 
 main();
