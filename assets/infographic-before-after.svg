@@ -1,0 +1,39 @@
+<svg viewBox="0 0 900 460" width="900" height="460" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="900" height="460" fill="#0d1117"/>
+  <text x="450" y="36" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="700" fill="#f0f6fc">What /compact does to your context</text>
+  <text x="450" y="58" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" fill="#8b949e">(same session, two outcomes)</text>
+
+  <rect x="40" y="90" width="380" height="330" rx="12" fill="#161b22" stroke="#f85149" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="60" y="130" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="16" font-weight="700" fill="#f85149">without anti-compact</text>
+  <text x="60" y="152" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#8b949e">/compact fires — lossy summary</text>
+
+  <text x="60" y="194" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f85149">&#10007;</text>
+  <text x="82" y="194" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#8b949e">exact file paths</text>
+  <text x="60" y="230" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f85149">&#10007;</text>
+  <text x="82" y="230" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#8b949e">decision rationale</text>
+  <text x="60" y="266" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f85149">&#10007;</text>
+  <text x="82" y="266" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#8b949e">the fix you already found</text>
+  <text x="60" y="302" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f85149">&#10007;</text>
+  <text x="82" y="302" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#8b949e">issue IDs &amp; commands</text>
+
+  <rect x="60" y="360" width="180" height="32" rx="16" fill="#3a1618"/>
+  <text x="150" y="381" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="13" font-weight="600" fill="#f85149">lossy summary</text>
+
+  <text x="450" y="266" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="40" fill="#6e7681">&#8594;</text>
+
+  <rect x="480" y="90" width="380" height="330" rx="12" fill="#161b22" stroke="#2dd4bf" stroke-width="2"/>
+  <text x="500" y="130" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="16" font-weight="700" fill="#2dd4bf">with anti-compact</text>
+  <text x="500" y="152" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" fill="#8b949e">/compact intercepted — structured handoff</text>
+
+  <text x="500" y="194" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#2dd4bf">&#10003;</text>
+  <text x="522" y="194" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f0f6fc">exact file paths</text>
+  <text x="500" y="230" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#2dd4bf">&#10003;</text>
+  <text x="522" y="230" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f0f6fc">decision rationale</text>
+  <text x="500" y="266" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#2dd4bf">&#10003;</text>
+  <text x="522" y="266" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f0f6fc">the fix you already found</text>
+  <text x="500" y="302" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#2dd4bf">&#10003;</text>
+  <text x="522" y="302" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="14" fill="#f0f6fc">issue IDs &amp; commands</text>
+
+  <rect x="500" y="360" width="200" height="32" rx="16" fill="#0f3d38"/>
+  <text x="600" y="381" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="13" font-weight="600" fill="#2dd4bf">structured handoff</text>
+</svg>
