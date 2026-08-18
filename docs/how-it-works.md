@@ -92,3 +92,15 @@ the hook entirely.
 - The `claude` binary must be resolvable — via `PATH`, a known fallback location, or the
   `ANTI_COMPACT_CLAUDE_BIN` override. If it can't be found, the hook falls back to structured
   extraction.
+
+### Safety valve
+
+Blocking `PreCompact` unconditionally is safe when auto-compact fires proactively (the block
+just skips that compaction), but if it ever fires reactively — recovering from a context-limit
+error the API already returned — blocking it surfaces that error and hard-fails the current turn
+instead. The hook's stdin has no field distinguishing the two cases, so `hooks/lib/state.mjs`
+tracks consecutive blocks per session against a transcript that isn't growing (a blocked
+proactive compaction simply doesn't re-fire until the transcript grows). After 3 consecutive
+blocks with no progress, or if the estimated usage hits 95%, the hook fails open (`exit 0`
+instead of `2`) and prints a visible banner instead of risking a silent crash. Opt out with
+`ANTI_COMPACT_SAFETY_VALVE=0` to restore unconditional blocking.
