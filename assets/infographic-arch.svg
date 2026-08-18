@@ -37,6 +37,6 @@
   <text x="190" y="505" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="13" fill="#f0883e">block (exit 2)</text>
 
   <rect x="340" y="460" width="220" height="60" rx="8" fill="#161b22" stroke="#8b949e" stroke-width="1.5"/>
-  <text x="450" y="485" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="13" fill="#f0f6fc">HANDOFF_ONLY</text>
+  <text x="450" y="485" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="10" fill="#f0f6fc">ANTI_COMPACT_ENABLE_HANDOFF_ONLY</text>
   <text x="450" y="505" text-anchor="middle" font-family="ui-monospace,SF Mono,Menlo,monospace" font-size="13" fill="#8b949e">allow (exit 0)</text>
 </svg>
