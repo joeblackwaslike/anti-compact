@@ -17,7 +17,8 @@
  * before that crash can happen. Opt out with ANTI_COMPACT_SAFETY_VALVE=0.
  *
  * stdin: JSON with { hook_event_name, session_id, transcript_path }
- * stdout: raw text (Claude Code PreCompact convention — NOT JSON)
+ * stdout: hookSpecificOutput JSON with additionalContext (handoff text) — VS Code extension
+ *         may surface this as a system-reminder; terminal falls back to the saved file
  */
 
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
