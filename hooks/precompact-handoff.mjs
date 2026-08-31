@@ -17,8 +17,8 @@
  * before that crash can happen. Opt out with ANTI_COMPACT_SAFETY_VALVE=0.
  *
  * stdin: JSON with { hook_event_name, session_id, transcript_path }
- * stdout: hookSpecificOutput JSON with additionalContext (handoff text) — VS Code extension
- *         may surface this as a system-reminder; terminal falls back to the saved file
+ * stdout: raw text (Claude Code PreCompact convention — NOT JSON)
+ *         hookSpecificOutput JSON was tried and confirmed ignored by Claude Code for PreCompact
  */
 
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -185,14 +185,9 @@ ${summary}
 ${safetyValveBanner}`;
 
   const filePath = sessionId !== 'unknown' ? writeHandoffFile(sessionId, handoffText) : null;
-  const fileNote = filePath ? `\nHandoff saved to: ${filePath}` : '';
+  const fileNote = filePath ? `\nHandoff saved to: ${filePath}\n` : '';
 
-  process.stdout.write(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: 'PreCompact',
-      additionalContext: handoffText + fileNote,
-    },
-  }) + '\n');
+  process.stdout.write(handoffText + fileNote);
 
   process.exit(exitCode);
 }
