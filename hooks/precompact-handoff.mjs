@@ -20,7 +20,8 @@
  * stdout: raw text (Claude Code PreCompact convention — NOT JSON)
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
 import {
   parseTranscript,
@@ -106,6 +107,18 @@ async function generateHandoff(entries) {
   });
 }
 
+function writeHandoffFile(sessionId, content) {
+  try {
+    const dir = join(process.env.HOME ?? '/tmp', '.claude', 'handoffs');
+    mkdirSync(dir, { recursive: true });
+    const filePath = join(dir, `${sessionId}.md`);
+    writeFileSync(filePath, content, 'utf8');
+    return filePath;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   let transcriptPath = null;
   let sessionId = 'unknown';
@@ -159,7 +172,7 @@ async function main() {
     }
   }
 
-  process.stdout.write(`# [anti-compact] Pre-Compact Handoff
+  const handoffText = `# [anti-compact] Pre-Compact Handoff
 
 Context: ~${approxK}k / ~${windowK}k tokens (~${pct}%). Compaction would degrade inference quality — blocking to preserve session context.
 
@@ -168,7 +181,17 @@ Copy this prompt to continue in a new session:
 \`\`\`
 ${summary}
 \`\`\`
-${safetyValveBanner}`);
+${safetyValveBanner}`;
+
+  const filePath = sessionId !== 'unknown' ? writeHandoffFile(sessionId, handoffText) : null;
+  const fileNote = filePath ? `\nHandoff saved to: ${filePath}` : '';
+
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'PreCompact',
+      additionalContext: handoffText + fileNote,
+    },
+  }) + '\n');
 
   process.exit(exitCode);
 }
