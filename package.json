@@ -22,5 +22,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/joeblackwaslike/anti-compact.git"
-  }
+  },
+  "packageManager": "pnpm@11.0.8"
 }
